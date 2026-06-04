@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}添加论文 - 学术论文数据库管理系统{% endblock %}
+
+{% block content %}
+<h2>添加论文（触发器控制）</h2>
+<p class="text-muted">
+    Draft 表示草稿，不需要选择期刊/会议；Accepted 表示已有明确接收场所，必须选择期刊/会议。
+    数据库触发器会检查年份、状态和 venue 规则，并自动维护期刊/会议论文数量。
+</p>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form id="addPaperForm">
+                    <div class="form-group">
+                        <label>论文标题 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="title" required placeholder="请输入论文标题">
+                    </div>
+
+                    <div class="form-group">
+                        <label>摘要</label>
+                        <textarea class="form-control" name="abstract" rows="3" placeholder="请输入论文摘要"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>年份 <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="publish_year" placeholder="例如 2024" required>
+                            <small class="form-text text-muted">合法范围：1900 ~ {{ current_year + 1 if current_year else 2027 }}</small>
+                        </div>
+
+                        <div class="form-group col-md-6">
+                            <label>论文状态</label>
+                            <select class="form-control" name="status" id="statusSelect">
+                                <option value="Draft">Draft（草稿）</option>
+                                <option value="Submitted">Submitted（已投稿）</option>
+                                <option value="Accepted">Accepted（已接收）</option>
+                                <option value="Rejected">Rejected（已拒绝）</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label id="venueLabel">期刊/会议</label>
+                        <select class="form-control" name="venue_id" id="venueSelect">
+                            <option value="">-- 暂不选择 --</option>
+                            {% for v in venues %}
+                            <option value="{{ v.venue_id }}">{{ v.venue_name }} ({{ v.venue_type }})</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted" id="venueHelp"></small>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <label class="mb-0">作者与关键词</label>
+                                <small class="form-text text-muted">作者至少选择一位；关键词可选。</small>
+                            </div>
+                            <button class="btn btn-outline-secondary btn-sm" type="button"
+                                    data-toggle="collapse" data-target="#paperMetaCollapse"
+                                    aria-expanded="false" aria-controls="paperMetaCollapse"
+                                    id="paperMetaToggle">
+                                展开选择
+                            </button>
+                        </div>
+
+                        <div class="collapse mt-3" id="paperMetaCollapse">
+                            <div class="meta-select-panel">
+                                <label>作者（至少选择一位） <span class="text-danger">*</span></label>
+                                <div class="row option-list">
+                                    {% for a in authors %}
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="author_ids" value="{{ a.author_id }}" id="author{{ a.author_id }}">
+                                            <label class="form-check-label" for="author{{ a.author_id }}">
+                                                {{ a.name }} <small class="text-muted">({{ a.institution }})</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                <hr>
+
+                                <label>关键词（可多选）</label>
+                                <div class="row option-list option-list-keywords">
+                                    {% for k in keywords %}
+                                    <div class="col-md-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="keyword_ids" value="{{ k.keyword_id }}" id="kw{{ k.keyword_id }}">
+                                            <label class="form-check-label" for="kw{{ k.keyword_id }}">{{ k.keyword_name }}</label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">提交论文</button>
+                    <button type="button" class="btn btn-danger ml-2" id="testInvalidBtn">测试非法年份</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">数据库规则</div>
+            <div class="card-body">
+                <h6><code>trg_check_paper_year</code></h6>
+                <p class="small">插入论文前检查年份是否在 1900 到当前年份 + 1 之间。</p>
+
+                <h6><code>trg_check_paper_status</code></h6>
+                <p class="small">插入论文前检查状态是否属于 Draft、Submitted、Accepted、Rejected。</p>
+
+                <h6><code>trg_check_paper_venue_insert</code></h6>
+                <p class="small">Draft 不能绑定 venue；Accepted 必须绑定 venue。</p>
+
+                <h6><code>trg_update_venue_paper_count</code></h6>
+                <p class="small">论文绑定 venue 后，自动维护 <code>venue.paper_count</code>。</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="resultArea" class="mt-3"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function() {
+    function updateVenueState() {
+        var status = $('#statusSelect').val();
+
+        if (status === 'Draft') {
+            $('#venueSelect').prop('disabled', false).prop('required', false);
+            $('#venueLabel').html('期刊/会议');
+            $('#venueHelp').text('前端已放开限制：选择期刊/会议后提交，会由数据库触发器拦截 Draft + venue 的非法组合。');
+        } else {
+            $('#venueSelect').prop('disabled', false).prop('required', false);
+            $('#venueLabel').html('期刊/会议');
+            $('#venueHelp').text(status === 'Accepted'
+                ? '前端不强制选择。若不选择并提交，会由数据库触发器拦截 Accepted 缺少 venue 的非法组合。'
+                : 'Submitted 或 Rejected 的投稿目标主要记录在 submission 表中，这里可以暂不选择。');
+        }
+    }
+
+    $('#statusSelect').change(updateVenueState);
+    updateVenueState();
+
+    $('#addPaperForm').submit(function(e) {
+        e.preventDefault();
+
+        $.post('/add_paper', $(this).serialize(), function(data) {
+            var cls = data.success ? 'alert-success' : 'alert-danger';
+            $('#resultArea').html('<div class="alert ' + cls + '">' + data.message + '</div>');
+            if (data.success) {
+                setTimeout(function() { location.reload(); }, 2000);
+            } else {
+                updateVenueState();
+            }
+        });
+    });
+
+    $('#testInvalidBtn').click(function() {
+        $('input[name="title"]').val('测试非法年份的论文');
+        $('input[name="publish_year"]').val('1800');
+        $('#statusSelect').val('Draft');
+        $('#venueSelect').val('');
+        updateVenueState();
+        $('input[name="author_ids"]').prop('checked', false);
+        $('input[name="author_ids"]:first').prop('checked', true);
+        $('#addPaperForm').submit();
+    });
+
+    $('#paperMetaCollapse').on('show.bs.collapse', function() {
+        $('#paperMetaToggle').text('收起选择');
+    }).on('hide.bs.collapse', function() {
+        $('#paperMetaToggle').text('展开选择');
+    });
+});
+</script>
+{% endblock %}

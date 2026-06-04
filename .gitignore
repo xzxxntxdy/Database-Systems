@@ -1,0 +1,57 @@
+# Project-local documents and generated report assets
+*.md
+!README.md
+!README.MD
+report/
+.claude/
+design/
+
+# Python cache and build outputs
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Virtual environments and local configuration
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+instance/
+
+# Logs and runtime files
+*.log
+flask_stdout.log
+flask_stderr.log
+*.pid
+
+# Local Windows helper scripts
+*.bat
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Packaged archives and office exports
+*.zip
+*.rar
+*.7z
+*.doc
+*.docx
+*.pdf

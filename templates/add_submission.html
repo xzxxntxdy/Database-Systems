@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}添加投稿记录 - 学术论文数据库管理系统{% endblock %}
+
+{% block content %}
+<h2>添加投稿记录</h2>
+<p class="text-muted">
+    选择一篇尚未最终接收或发表的论文，提交到一个期刊/会议。系统会新增一条
+    <code>Under Review</code> 投稿记录，并把论文状态同步为 <code>Submitted</code>。
+</p>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header bg-primary text-white">新增投稿</div>
+            <div class="card-body">
+                {% if papers %}
+                <form id="addSubmissionForm">
+                    <div class="form-group">
+                        <label>选择论文 <span class="text-danger">*</span></label>
+                        <select class="form-control" name="paper_id" required>
+                            <option value="">-- 请选择论文 --</option>
+                            {% for p in papers %}
+                            <option value="{{ p.paper_id }}">
+                                #{{ p.paper_id }} - {{ p.title[:36] }}{% if p.title|length > 36 %}...{% endif %}
+                                （状态：{{ p.status }}{% if p.latest_result %}，最近投稿：{{ p.latest_result }}{% endif %}）
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">
+                            已有 Under Review 投稿或已 Accepted 的论文不会出现在这里。
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>投稿期刊/会议 <span class="text-danger">*</span></label>
+                        <select class="form-control" name="venue_id" required>
+                            <option value="">-- 请选择期刊/会议 --</option>
+                            {% for v in venues %}
+                            <option value="{{ v.venue_id }}">{{ v.venue_name }} ({{ v.venue_type }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>投稿日期</label>
+                        <input type="date" class="form-control" name="submit_date" id="submitDateInput">
+                        <small class="form-text text-muted">不填写时默认使用今天。</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">提交投稿</button>
+                </form>
+                {% else %}
+                <div class="alert alert-info mb-0">
+                    当前没有可投稿的论文。可以先添加一篇 Draft 论文，或把被拒论文作为修改后重新投稿对象。
+                </div>
+                {% endif %}
+
+                <div id="resultArea" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">业务规则</div>
+            <div class="card-body">
+                <ul class="small mb-3">
+                    <li>新增投稿时，<code>submission.result</code> 默认为 <code>Under Review</code>。</li>
+                    <li>论文状态同步为 <code>Submitted</code>。</li>
+                    <li>同一篇论文不能同时存在多个 <code>Under Review</code> 投稿。</li>
+                    <li>投稿目标保存在 <code>submission.venue_id</code>，不是 <code>paper.venue_id</code>。</li>
+                    <li>只有投稿被接收后，<code>paper.venue_id</code> 才同步为最终接收 venue。</li>
+                </ul>
+
+                <h6>对应 SQL 逻辑</h6>
+                <pre class="small bg-light p-2"><code>INSERT INTO submission (...)
+VALUES (..., 'Under Review');
+
+UPDATE paper
+SET status = 'Submitted',
+    venue_id = NULL
+WHERE paper_id = ?;</code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function() {
+    var today = new Date().toISOString().slice(0, 10);
+    $('#submitDateInput').val(today);
+
+    $('#addSubmissionForm').submit(function(e) {
+        e.preventDefault();
+        $.post('/add_submission', $(this).serialize(), function(data) {
+            var cls = data.success ? 'alert-success' : 'alert-danger';
+            $('#resultArea').html('<div class="alert ' + cls + '">' + data.message + '</div>');
+            if (data.success) {
+                setTimeout(function() { location.reload(); }, 2000);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

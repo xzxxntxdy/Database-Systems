@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}添加引用关系 - 学术论文数据库管理系统{% endblock %}
+
+{% block content %}
+<h2>添加引用关系</h2>
+<p class="text-muted">
+    引用关系表示一篇论文在参考文献中引用了另一篇论文：
+    <code>citing_paper_id</code> 是引用方，<code>cited_paper_id</code> 是被引用方。
+</p>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">新增引用</div>
+            <div class="card-body">
+                <form id="addCitationForm">
+                    <div class="form-group">
+                        <label>引用方论文 <span class="text-danger">*</span></label>
+                        <select class="form-control" name="citing_paper_id" id="citingPaperSelect" required>
+                            <option value="">-- 请选择引用方论文 --</option>
+                            {% for p in papers %}
+                            <option value="{{ p.paper_id }}">
+                                #{{ p.paper_id }} - {{ p.title[:42] }}{% if p.title|length > 42 %}...{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">这篇论文的参考文献列表中出现了另一篇论文。</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>被引用论文 <span class="text-danger">*</span></label>
+                        <select class="form-control" name="cited_paper_id" id="citedPaperSelect" required>
+                            <option value="">-- 请选择被引用论文 --</option>
+                            {% for p in papers %}
+                            <option value="{{ p.paper_id }}">
+                                #{{ p.paper_id }} - {{ p.title[:42] }}{% if p.title|length > 42 %}...{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">被引用论文会增加“被引次数”。</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">添加引用</button>
+                </form>
+                <div id="resultArea" class="mt-3"></div>
+            </div>
+        </div>
+
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">字段含义</div>
+            <div class="card-body">
+                <ul class="small mb-0">
+                    <li><code>citing_paper_id</code>：引用方论文，即“谁引用别人”。</li>
+                    <li><code>cited_paper_id</code>：被引用论文，即“谁被别人引用”。</li>
+                    <li><code>reference_count</code>：一篇论文引用了多少篇系统内论文。</li>
+                    <li><code>cited_by_count</code>：一篇论文被多少篇系统内论文引用。</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                已有引用关系（共 {{ citations|length }} 条）
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>引用方</th>
+                                <th>被引用方</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if citations %}
+                            {% for c in citations %}
+                            <tr>
+                                <td>#{{ c.citing_paper_id }} {{ c.citing_title[:36] }}{% if c.citing_title|length > 36 %}...{% endif %}</td>
+                                <td>#{{ c.cited_paper_id }} {{ c.cited_title[:36] }}{% if c.cited_title|length > 36 %}...{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="2" class="text-center text-muted py-4">暂无引用关系</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function() {
+    $('#addCitationForm').submit(function(e) {
+        e.preventDefault();
+
+        if ($('#citingPaperSelect').val() === $('#citedPaperSelect').val()) {
+            $('#resultArea').html('<div class="alert alert-danger">论文不能引用自己</div>');
+            return;
+        }
+
+        $.post('/add_citation', $(this).serialize(), function(data) {
+            var cls = data.success ? 'alert-success' : 'alert-danger';
+            $('#resultArea').html('<div class="alert ' + cls + '">' + data.message + '</div>');
+            if (data.success) {
+                setTimeout(function() { location.reload(); }, 1500);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

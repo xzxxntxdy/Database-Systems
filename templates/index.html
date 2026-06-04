@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}首页 - 学术论文数据库管理系统{% endblock %}
+
+{% block content %}
+<div class="jumbotron">
+    <h1 class="display-4">学术论文数据库管理系统</h1>
+    <p class="lead">
+        面向科研团队的论文信息管理系统，支持论文、作者、期刊/会议、投稿、审稿、关键词和引用关系管理。
+    </p>
+    <hr class="my-4">
+    <p>系统基于 Flask + MySQL 开发，包含事务、触发器、存储过程和视图等数据库核心功能。</p>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body text-center">
+                <h5 class="card-title">论文总数</h5>
+                <h2>{{ paper_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body text-center">
+                <h5 class="card-title">作者总数</h5>
+                <h2>{{ author_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body text-center">
+                <h5 class="card-title">期刊/会议</h5>
+                <h2>{{ venue_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body text-center">
+                <h5 class="card-title">投稿记录</h5>
+                <h2>{{ submission_count }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h3 class="mb-3">核心功能</h3>
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">1. 添加论文（触发器控制）</h5>
+                <p class="card-text">
+                    添加论文基本信息。触发器检查年份、状态和 venue 规则，并维护期刊/会议论文数量。
+                </p>
+                <a href="/add_paper" class="btn btn-primary">进入操作</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">2. 添加投稿记录</h5>
+                <p class="card-text">
+                    为 Draft 或被拒后修改的论文新增投稿记录，默认进入 Under Review，并同步论文状态为 Submitted。
+                </p>
+                <a href="/add_submission" class="btn btn-primary">进入操作</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">3. 添加引用关系</h5>
+                <p class="card-text">
+                    为论文添加引用关系，记录一篇论文引用了哪些已有论文，并用于计算被引次数和参考文献数。
+                </p>
+                <a href="/add_citation" class="btn btn-primary">进入操作</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">4. 更新投稿状态（存储过程控制）</h5>
+                <p class="card-text">
+                    通过存储过程更新最新投稿结果，同步论文状态，并校验投稿编号与论文编号的对应关系。
+                </p>
+                <a href="/update_submission" class="btn btn-primary">进入操作</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">5. 删除论文（事务控制）</h5>
+                <p class="card-text">
+                    删除论文及其作者关系、关键词关系、投稿、审稿和引用记录，失败时自动回滚。
+                </p>
+                <a href="/delete_paper" class="btn btn-primary">进入操作</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">6. 论文综合查询（视图查询）</h5>
+                <p class="card-text">
+                    通过视图查询论文、作者、期刊/会议、关键词、最新投稿状态和引用统计等综合信息。
+                </p>
+                <a href="/query_papers" class="btn btn-primary">进入操作</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h3 class="mb-3">数据浏览</h3>
+<div class="row">
+    {% set tables = ['author', 'venue', 'paper', 'keyword', 'paper_author', 'paper_keyword', 'submission', 'review', 'citation', 'v_paper_info'] %}
+    {% for table in tables %}
+    <div class="col-md-4 mb-2">
+        <button class="btn btn-outline-secondary btn-block btn-sm browse-btn" data-table="{{ table }}">
+            浏览 {{ table }} 表
+        </button>
+    </div>
+    {% endfor %}
+</div>
+<div id="table-content" class="mt-3"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function() {
+    $('.browse-btn').click(function() {
+        var table = $(this).data('table');
+        $.get('/api/browse/' + table, function(data) {
+            var html = '<h5>' + table + ' 表</h5>';
+            html += '<div class="table-responsive"><table class="table table-bordered table-sm">';
+            html += '<thead class="thead-dark"><tr>';
+            data.columns.forEach(function(col) {
+                html += '<th>' + col + '</th>';
+            });
+            html += '</tr></thead><tbody>';
+            data.rows.forEach(function(row) {
+                html += '<tr>';
+                data.columns.forEach(function(col) {
+                    var val = row[col];
+                    if (val === null) val = '<em class="text-muted">NULL</em>';
+                    html += '<td>' + val + '</td>';
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            $('#table-content').html(html);
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}删除论文 - 学术论文数据库管理系统{% endblock %}
+{% block content %}
+<h2>删除论文（含有事务应用的删除操作）</h2>
+<p class="text-muted">使用数据库事务删除论文及其关联的作者关系、关键词关系、投稿记录、审稿记录和引用关系。如果任何一步失败，事务将回滚。</p>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">删除论文</div>
+            <div class="card-body">
+                <form id="deleteForm">
+                    <div class="form-group">
+                        <label>选择要删除的论文编号</label>
+                        <select class="form-control" name="paper_id" required>
+                            <option value="">-- 请选择论文 --</option>
+                            {% for p in papers %}
+                            <option value="{{ p.paper_id }}">#{{ p.paper_id }} - {{ p.title[:40] }}... ({{ p.status }}, {{ p.publish_year }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-danger">确认删除</button>
+                </form>
+                <div id="resultArea" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-warning">
+            <div class="card-header bg-warning">事务说明</div>
+            <div class="card-body">
+                <h6>删除涉及的表（6张）：</h6>
+                <ol>
+                    <li><code>review</code> — 审稿记录</li>
+                    <li><code>submission</code> — 投稿记录</li>
+                    <li><code>paper_author</code> — 论文作者关系</li>
+                    <li><code>paper_keyword</code> — 论文关键词关系</li>
+                    <li><code>citation</code> — 论文引用关系</li>
+                    <li><code>paper</code> — 论文本身</li>
+                </ol>
+                <h6>表连接字段：</h6>
+                <ul class="small">
+                    <li>review.submission_id = submission.submission_id</li>
+                    <li>paper.paper_id = paper_author.paper_id</li>
+                    <li>paper.paper_id = paper_keyword.paper_id</li>
+                    <li>paper.paper_id = submission.paper_id</li>
+                    <li>paper.paper_id = citation.citing_paper_id</li>
+                    <li>paper.paper_id = citation.cited_paper_id</li>
+                </ul>
+                <h6>删除条件：</h6>
+                <p class="small"><code>paper.paper_id = ?</code></p>
+                <h6>事务控制：</h6>
+                <p class="small">Python 代码中使用 <code>conn.commit()</code> 提交事务，使用 <code>conn.rollback()</code> 回滚事务。</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function() {
+    $('#deleteForm').submit(function(e) {
+        e.preventDefault();
+        if (!confirm('确定要删除该论文及其所有关联数据吗？此操作不可撤销！')) {
+            return;
+        }
+        $.post('/delete_paper', $(this).serialize(), function(data) {
+            var cls = data.success ? 'alert-success' : 'alert-danger';
+            $('#resultArea').html('<div class="alert ' + cls + '">' + data.message + '</div>');
+            if (data.success) {
+                setTimeout(function() { location.reload(); }, 2000);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

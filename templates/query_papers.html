@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}论文综合查询 - 学术论文数据库管理系统{% endblock %}
+
+{% block content %}
+<h2>论文综合查询（视图查询）</h2>
+<p class="text-muted">
+    本页面基于单个综合视图 <code>v_paper_info</code> 查询论文、作者、期刊/会议、关键词、最新投稿状态、
+    被引用次数和参考文献数量。
+</p>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-3">
+            <div class="card-body">
+                <form method="POST" class="form-inline">
+                    <div class="form-group mr-2 flex-grow-1">
+                        <input type="text" class="form-control w-100" name="keyword"
+                               value="{{ keyword }}" placeholder="输入搜索关键词：标题、作者、期刊/会议、关键词">
+                    </div>
+                    <button type="submit" class="btn btn-primary mr-2">搜索</button>
+                    <a href="/query_papers" class="btn btn-outline-secondary">显示全部</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                查询结果（共 {{ results|length }} 条）
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>标题</th>
+                                <th>作者</th>
+                                <th>期刊/会议</th>
+                                <th>年份</th>
+                                <th>状态</th>
+                                <th>投稿结果</th>
+                                <th>被引</th>
+                                <th>参考文献数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if results %}
+                            {% for r in results %}
+                            <tr>
+                                <td>{{ r.paper_id }}</td>
+                                <td>
+                                    <strong>{{ r.title }}</strong>
+                                    {% if r.keywords %}
+                                    <br><small class="text-muted">关键词：{{ r.keywords }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ r.authors or '-' }}</td>
+                                <td>
+                                    {{ r.venue_name or '-' }}
+                                    {% if r.venue_type %}
+                                    <br><small class="text-muted">{{ r.venue_type }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ r.publish_year or '-' }}</td>
+                                <td>
+                                    {% set status_labels = {
+                                        'Draft': 'secondary',
+                                        'Submitted': 'info',
+                                        'Accepted': 'success',
+                                        'Rejected': 'danger'
+                                    } %}
+                                    <span class="badge badge-{{ status_labels.get(r.status, 'secondary') }}">
+                                        {{ r.status or '-' }}
+                                    </span>
+                                </td>
+                                <td>{{ r.submission_result or '-' }}</td>
+                                <td>{{ r.cited_by_count }}</td>
+                                <td>{{ r.reference_count }}</td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="9" class="text-center text-muted py-4">
+                                    暂无数据
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-info mb-3">
+            <div class="card-header bg-info text-white">使用的视图</div>
+            <div class="card-body">
+                <h6><code>v_paper_info</code></h6>
+                <p class="small">
+                    连接 <code>paper</code>、<code>venue</code>、<code>paper_author</code>、
+                    <code>author</code>、<code>paper_keyword</code>、<code>keyword</code>、
+                    <code>submission</code> 和 <code>citation</code>，查询论文综合信息。
+                </p>
+
+                <p class="small mb-0">
+                    引用统计字段直接由 <code>v_paper_info</code> 内部连接 <code>citation</code> 表计算，
+                    不再额外维护单独的引用统计视图。
+                </p>
+            </div>
+        </div>
+
+        <div class="card border-secondary">
+            <div class="card-header">核心 SQL</div>
+            <div class="card-body">
+                <pre class="small bg-light p-2 mb-0"><code>SELECT *
+FROM v_paper_info
+WHERE title LIKE ...;</code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
