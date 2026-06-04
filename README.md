@@ -126,14 +126,6 @@ python app.py
 
 浏览器访问: http://127.0.0.1:5000
 
-### 5. Windows 本地辅助脚本
-
-仓库中可能存在本地演示用的 `start.bat` 和 `stop.bat`，但 `.bat` 文件已加入 `.gitignore`，不会作为正式提交内容。
-
-- `start.bat`：本机一键启动 MySQL、初始化数据库并启动 Flask。
-- `stop.bat`：本机一键停止 `mysqld.exe` 和 `python.exe`。
-
-这些脚本依赖本机路径配置，换电脑运行时应优先使用上面的手动命令。
 
 ## 演示顺序
 
@@ -177,19 +169,6 @@ Database-Systems/
         └── main.js
 ```
 
-说明：报告材料、除 `README.md` 外的 Markdown 文档、`.claude/`、`.bat` 本地脚本、日志和缓存文件已加入 `.gitignore`。
-
-## Git 配置
-
-`.gitignore` 当前会忽略：
-
-- 除 `README.md` 外的 Markdown 文件。
-- `report/` 报告材料目录。
-- `.claude/` 本地配置目录。
-- `.bat` 本地辅助脚本。
-- Python 缓存、虚拟环境、日志、编辑器配置、系统临时文件和常见压缩/文档导出文件。
-
-`.gitattributes` 用于统一文本文件换行，避免 Windows 与其他系统之间出现换行差异。
 
 ## AI 使用说明
 
