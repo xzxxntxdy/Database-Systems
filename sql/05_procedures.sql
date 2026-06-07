@@ -14,7 +14,7 @@ DELIMITER //
 CREATE PROCEDURE sp_update_submission_result(
     IN p_submission_id INT,
     IN p_paper_id INT,
-    IN p_new_result VARCHAR(50)
+    IN p_new_result VARCHAR(20)
 )
 BEGIN
     DECLARE v_count INT DEFAULT 0;

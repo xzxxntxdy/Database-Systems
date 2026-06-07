@@ -27,7 +27,7 @@
                         <div class="form-group col-md-6">
                             <label>年份 <span class="text-danger">*</span></label>
                             <input type="number" class="form-control" name="publish_year" placeholder="例如 2024" required>
-                            <small class="form-text text-muted">合法范围：1900 ~ {{ current_year + 1 if current_year else 2027 }}</small>
+                            <small class="form-text text-muted">合法范围：1901 ~ {{ current_year + 1 if current_year else 2027 }}</small>
                         </div>
 
                         <div class="form-group col-md-6">
@@ -111,7 +111,7 @@
             <div class="card-header bg-info text-white">数据库规则</div>
             <div class="card-body">
                 <h6><code>trg_check_paper_year</code></h6>
-                <p class="small">插入论文前检查年份是否在 1900 到当前年份 + 1 之间。</p>
+                <p class="small">插入论文前检查年份是否在 1901 到当前年份 + 1 之间。</p>
 
                 <h6><code>trg_check_paper_status</code></h6>
                 <p class="small">插入论文前检查状态是否属于 Draft、Submitted、Accepted、Rejected。</p>
@@ -167,7 +167,7 @@ $(function() {
 
     $('#testInvalidBtn').click(function() {
         $('input[name="title"]').val('测试非法年份的论文');
-        $('input[name="publish_year"]').val('1800');
+        $('input[name="publish_year"]').val('{{ current_year + 2 if current_year else 2028 }}');
         $('#statusSelect').val('Draft');
         $('#venueSelect').val('');
         updateVenueState();

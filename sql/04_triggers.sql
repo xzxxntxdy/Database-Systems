@@ -20,9 +20,9 @@ BEFORE INSERT ON paper
 FOR EACH ROW
 BEGIN
     IF NEW.publish_year IS NOT NULL
-       AND (NEW.publish_year < 1900 OR NEW.publish_year > YEAR(CURDATE()) + 1) THEN
+       AND (NEW.publish_year < 1901 OR NEW.publish_year > YEAR(CURDATE()) + 1) THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Invalid publish year: must be between 1900 and current year plus 1';
+        SET MESSAGE_TEXT = 'Invalid publish year: must be between 1901 and current year plus 1';
     END IF;
 END //
 
@@ -119,7 +119,7 @@ BEFORE INSERT ON submission
 FOR EACH ROW
 BEGIN
     DECLARE v_under_review_count INT DEFAULT 0;
-    DECLARE v_paper_status VARCHAR(50) DEFAULT NULL;
+    DECLARE v_paper_status VARCHAR(10) DEFAULT NULL;
 
     IF NEW.result = 'Under Review' THEN
         SELECT status INTO v_paper_status
@@ -149,7 +149,7 @@ BEFORE UPDATE ON submission
 FOR EACH ROW
 BEGIN
     DECLARE v_under_review_count INT DEFAULT 0;
-    DECLARE v_paper_status VARCHAR(50) DEFAULT NULL;
+    DECLARE v_paper_status VARCHAR(10) DEFAULT NULL;
 
     IF NEW.result = 'Under Review' THEN
         SELECT status INTO v_paper_status
